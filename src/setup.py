@@ -24,7 +24,7 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "evcharge-status=evcharge_status.cli:status",
+            "evcharge-status=evcharge_status.cli:main",
             "evcharge-status-update-to-slack=evcharge_status.slack:status"
         ]
     },

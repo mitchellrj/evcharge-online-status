@@ -1,4 +1,7 @@
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
+import time
 from typing import Any, Generator, List, Mapping, MutableMapping
 
 import boto3
@@ -25,6 +28,7 @@ class Field:
     SITE_LAT = 'lat'
     SITE_LNG = 'lng'
     SITE_POINTS = 'points'
+    SITE_CHECKED = 'last_checked'
     POINT_ID = 'point_id'
     POINT_STATE = 'state'
     POINT_PRICE = 'price'
@@ -121,10 +125,13 @@ class Store:
             },
             Field.SITE_POINTS: {
                 'M': points_data
+            },
+            Field.SITE_CHECKED: {
+                'N': time.time()
             }
         }
 
-    def get_sites(self, *site_guids: str) -> Generator[Site, None, None]:
+    def _get_sites(self, *site_guids: str) -> Generator[Site, None, None]:
         unprocessed_keys = [
             {
                 Field.SITE_GUID: {
@@ -145,7 +152,13 @@ class Store:
 
             unprocessed_keys = result['UnprocessedKeys'][self.table_name]['Keys']
 
-    def put_sites(self, *sites: Site) -> List[Site]:
+    async def get_sites(self, *site_guids: str) -> Generator[Site, None, None]:
+        with ThreadPoolExecutor() as executor:
+            future = executor.submit(self._get_sites(*site_guids))
+            async for site in asyncio.wrap_future(future):
+                yield site
+
+    def _put_sites(self, *sites: Site) -> List[Site]:
         results = []
         unprocessed_items = [
             {
@@ -168,3 +181,8 @@ class Store:
             unprocessed_items = result['UnprocessedItems'][self.table_name]
 
         return results
+
+    async def put_sites(self, *sites: Site) -> List[Site]:
+        with ThreadPoolExecutor() as executor:
+            future = executor.submit(self._put_sites(*sites))
+            await asyncio.wrap_future(future)

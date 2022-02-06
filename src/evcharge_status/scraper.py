@@ -5,8 +5,8 @@ import re
 from typing import Any, Generator, MutableMapping
 from urllib.parse import urljoin
 
+import aiohttp
 import bs4
-import requests
 
 from .const import BASE_URL, USER_AGENT
 from .models import Point, Site, State
@@ -19,40 +19,42 @@ STRIP_WHITESPACE = re.compile(r'(^\s+|\s+$)', re.MULTILINE)
 
 class EVCharge:
 
-    session: requests.Session
+    session: aiohttp.ClientSession
 
-    def __init__(self):
-        self.session = requests.session()
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession(raise_for_status=True)
+        return self
 
-    def request(self, method: str, path: str, *args: Any, **kwargs: Any) -> requests.Response:
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.session.close()
+
+    async def request(self, method: str, path: str, *args: Any, **kwargs: Any) -> aiohttp.ClientResponse:
         url = BASE_URL
         if path:
             url = urljoin(f'{BASE_URL}', path)
         headers = kwargs.pop('headers', {})
         headers.setdefault('User-Agent', USER_AGENT)
-        response = self.session.request(method, url, headers=headers, *args, **kwargs)
-        response.raise_for_status()
-        return response
+        return self.session.request(method, url, headers=headers, *args, **kwargs)
 
-    def search(self, key: str) -> Generator[Site, None, None]:
-        response = self.request('POST', './nologinsites', headers={'Content-Type': 'application/json'}, data=json.dumps({
-            'CurrentLatitude': '52.06290',
-            'CurrentLongitude': '-1.33978',
-            'LocalDateTime': datetime.datetime.now().strftime(r'%Y-%m-%d %H:%M:%S'),
-            'LocalDateTimeZoneDiff': '0',
-            'IsFavourite': '0',
-            'ConnectorType': '0',
-            'ChargingSpeed': '',
-            'PaymentType': '-1',
-            'TariffPriceChanged': '0',
-            'TariffPriceFrom': '0',
-            'TariffPriceTo': '0',
-            'PointDistance': '',
-            'SearchKey': key
-        }))
+    async def search(self, key: str) -> Generator[Site, None, None]:
+        async with await self.request('POST', './nologinsites', headers={'Content-Type': 'application/json'}, data=json.dumps({
+                'CurrentLatitude': '52.06290',
+                'CurrentLongitude': '-1.33978',
+                'LocalDateTime': datetime.datetime.now().strftime(r'%Y-%m-%d %H:%M:%S'),
+                'LocalDateTimeZoneDiff': '0',
+                'IsFavourite': '0',
+                'ConnectorType': '0',
+                'ChargingSpeed': '',
+                'PaymentType': '-1',
+                'TariffPriceChanged': '0',
+                'TariffPriceFrom': '0',
+                'TariffPriceTo': '0',
+                'PointDistance': '',
+                'SearchKey': key
+            })) as response:
 
-        data = response.json()
-        # return data['MessagePoint'] - this is just a direct link to the GUID of the best matching site
+            data = await response.json()
+            # return data['MessagePoint'] - this is just a direct link to the GUID of the best matching site
 
         for site in data.get('objSites', []):
             yield Site(
@@ -68,12 +70,12 @@ class EVCharge:
                 {},
                 self,
             )
-        return
 
-    def get_site_points(self, guid: str) -> MutableMapping[str, Point]:
+    async def get_site_points(self, guid: str) -> MutableMapping[str, Point]:
         points = {}
-        response = self.request('GET', f'./nologinpoints/{guid}')
-        soup = bs4.BeautifulSoup(response.content, features='html.parser')
+        async with await self.request('GET', f'./nologinpoints/{guid}') as response:
+            soup = bs4.BeautifulSoup(await response.read(), features='html.parser')
+
         for point_container in soup.select('.charg-list.site-details'):
             point_row = point_container.find_parent(onclick=True)
             on_click_js = point_row.attrs['onclick']

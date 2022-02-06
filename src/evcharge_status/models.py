@@ -81,8 +81,8 @@ class Site:
         
         return self._points
     
-    def refresh_points(self) -> None:
-        self._points = self._evcharge.get_site_points(self.guid)
+    async def refresh_points(self) -> None:
+        self._points = await self._evcharge.get_site_points(self.guid)
 
     def __str__(self) -> str:
         return self.guid
