@@ -6,7 +6,8 @@ from typing import Any, Generator, List, Mapping, MutableMapping
 
 import boto3
 
-from ..models import Point, Site, State, Union
+from .base import StoreType
+from ..models import ConnectorType, Point, Site, State, Union
 
 # Design note:
 # Using conditional writes charges you for a write even if it doesn't result in an update,
@@ -30,6 +31,8 @@ from ..models import Point, Site, State, Union
 #     state: S
 #     price: S
 #     max_power: N
+#     connector_type: S
+#     image_url: S
 #   }
 # }
 # last_checked: N
@@ -54,9 +57,11 @@ class Field:
     POINT_STATE = 'state'
     POINT_PRICE = 'price'
     POINT_MAX_POWER = 'max_power'
+    POINT_CONNECTOR_TYPE = 'connector_type'
+    POINT_IMAGE_URL = 'image_url'
 
 
-class Store:
+class Store(StoreType):
 
     table_name: str
 
@@ -74,11 +79,19 @@ class Store:
                 state = State(state_text)
             except ValueError:
                 state = State.UNKNOWN
+            # shouldn't need to account for bad state values in the table, but just in case
+            connector_type_text = point_data.get(Field.POINT_CONNECTOR_TYPE, {}).get('S')
+            try:
+                connector_type = ConnectorType(connector_type_text)
+            except ValueError:
+                connector_type = ConnectorType.UNKNOWN
             points[point_guid] = Point(
                 point_data.get(Field.POINT_ID, {}).get('S'),
                 state,
                 Decimal(point_data.get(Field.POINT_PRICE, {}).get('S', '0')),
                 point_data.get(Field.POINT_MAX_POWER, {}).get('N', 0),
+                connector_type,
+                point_data.get(Field.POINT_IMAGE_URL, {}).get('S', None)
             )
         return Site(
             item[Field.SITE_GUID]['S'],
@@ -107,6 +120,12 @@ class Store:
             },
             Field.POINT_MAX_POWER: {
                 'N': point.max_power
+            },
+            Field.POINT_CONNECTOR_TYPE: {
+                'S': point.connector_type.value
+            },
+            Field.POINT_IMAGE_URL: {
+                'S': point.image_url
             }
         }
 

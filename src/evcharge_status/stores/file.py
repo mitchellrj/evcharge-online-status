@@ -4,13 +4,14 @@ from typing import Any, Generator, List, Mapping, Union
 
 import aiofiles
 
-from ..models import Point, Site, State
+from .base import StoreType
+from ..models import ConnectorType, Point, Site, State
 
 
 JSONType = Union[bool, float, int, List['JSONType'], Mapping[str, 'JSONType'], None, str]
 
 
-class Store:
+class Store(StoreType):
 
     def __init__(self, file_path: str):
         self.file_path = file_path
@@ -22,6 +23,8 @@ class Store:
             "state": point.state.value,
             "price": str(point.price),
             "max_power": point.max_power,
+            "connector_type": point.connector_type.value,
+            "image_url": point.image_url,
         }
 
     @classmethod
@@ -49,12 +52,19 @@ class Store:
                 state = State(state_text)
             except ValueError:
                 state = State.UNKNOWN
+            connector_type_text = point.get("connector_type")
+            try:
+                connector_type = ConnectorType(connector_type_text)
+            except ValueError:
+                connector_type = ConnectorType.UNKNOWN
             points.append(Point(
                 guid,
                 point.get("point_id"),
                 state,
                 point.get("price"),
                 point.get("max_power"),
+                connector_type,
+                point.get("image_url"),
             ))
         return Site(
             site.get('guid'),

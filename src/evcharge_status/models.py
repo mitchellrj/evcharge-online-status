@@ -4,13 +4,14 @@ from re import S
 from typing import Any, List, MutableMapping, NamedTuple, Optional, Set, Tuple
 
 
-class ConnectorType(enum.IntEnum):
-
-    UK_3_PIN = 1
-    CCS = 2
-    CHADEMO = 3
-    TYPE_1 = 4
-    TYPE_2 = 5
+class ConnectorType(enum.Enum):
+    
+    UNKNOWN  = 'Unknown'
+    UK_3_PIN = 'UK 3 pin'
+    CCS      = 'CCS'
+    CHADEMO  = 'CHAdeMO'
+    TYPE_1   = 'Type 1'
+    TYPE_2   = 'Type 2'
 
 class State(enum.Enum):
 
@@ -27,15 +28,17 @@ class Point:
     price: Decimal
     max_power: float
     connector_type: Optional[ConnectorType]
+    image_url: str
 
     def __init__(self, guid: str, point_id: str, state: State, price: Decimal,
-            max_power: float, connector_type: Optional[ConnectorType]=None):
+            max_power: float, connector_type: ConnectorType, image_url: Optional[str]=None):
         self.guid = guid
         self.point_id = point_id
         self.state = state
         self.price = price
         self.max_power = max_power
         self.connector_type = connector_type
+        self.image_url = image_url
 
 
 class Site:

@@ -4,11 +4,12 @@ import sys
 
 import aiofiles
 
+from .base import NotifierType
 from .const import CONNECTOR_TYPE_NAME, STATE_NAME
 from ..const import DEFAULT_ENCODING
-from ..models import Site, SiteDiff
+from ..models import ConnectorType, Site, SiteDiff
 
-class Notifier:
+class Notifier(NotifierType):
 
     def __init__(self, file_path_or_writable: Optional[Union[str, TextIO]]=None, encoding: Optional[str]=None):
         if file_path_or_writable is None:
@@ -17,6 +18,12 @@ class Notifier:
         if encoding is None:
             encoding = DEFAULT_ENCODING
         self.encoding = encoding
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        pass
 
     async def write(self, message: str) -> int:
         message = f'{message}{os.linesep}'
@@ -44,7 +51,7 @@ class Notifier:
                     await self.write(f'{point_id}: {attribute} changed from {str(old)} to {str(new)}')
 
     async def notify_state(self, site: Site) -> None:
-        await self.write(f'* {site.name}:')
+        await self.write(f'* {site.name}')
         await self.write(f'  {site.address}')
         await self.write(f'  {site.town}')
         await self.write(f'  {site.county}')
@@ -54,7 +61,7 @@ class Notifier:
         for point in site.points.values():
             await self.write(f'  - {point.point_id}')
             await self.write(f'    {STATE_NAME.get(point.state, point.state.value)}')
-            if point.connector_type is not None:
+            if point.connector_type is not ConnectorType.UNKNOWN:
                 await self.write(f'    Connector: {CONNECTOR_TYPE_NAME.get(point.connector_type, point.connector_type.value)}')
             await self.write(f'    {point.max_power} KWh')
             await self.write(f'    £{point.price}/KWh')

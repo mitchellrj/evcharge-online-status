@@ -1,8 +1,10 @@
 import importlib
 from urllib.parse import parse_qs, urlparse
 
+from .base import StoreType
 
-def get_store(uri: str):
+
+def get_store(uri: str) -> StoreType:
     parts = urlparse(uri)
     scheme = parts.scheme
     if not scheme:
