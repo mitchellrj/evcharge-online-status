@@ -12,6 +12,27 @@ from ..models import Point, Site, State, Union
 # Using conditional writes charges you for a write even if it doesn't result in an update,
 # so we do a separate read and then decide whether we want to write back or not. Conditional
 # writes are useful for isolation, but not efficiency.
+#
+# Schema:
+#
+# site_guid: S (PK)
+# name: S
+# address: S
+# town: S
+# county: S
+# postcode: S
+# country: S
+# lat: S
+# lng: S
+# points: M {
+#   point_guid: {
+#     point_id: S
+#     state: S
+#     price: S
+#     max_power: N
+#   }
+# }
+# last_checked: N
 
 DynamoDBItem = Mapping[str, Mapping[str, Union[bool, float, int, List['DynamoDBItem'], Mapping[str, 'DynamoDBItem'], None, str]]]
 
