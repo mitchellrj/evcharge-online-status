@@ -65,8 +65,11 @@ async def async_main(argv=None):
                 for site in sites:
                     await notifier.notify_state(site)
 
-            loop = asyncio.get_running_loop()
-            loop.add_signal_handler(signal.SIGUSR1, lambda: asyncio.create_task(notify_current_state()))
+            # add listener for SIGUSR1 if available
+            if 'win' not in sys.platform():
+                loop = asyncio.get_running_loop()
+                loop.add_signal_handler(signal.SIGUSR1, lambda: asyncio.create_task(notify_current_state()))
+
             await asyncio.sleep(args.period)
             await watcher(sites, args.period, store, notifier)
 
