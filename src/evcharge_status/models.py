@@ -16,6 +16,7 @@ class State(enum.Enum):
 
     AVAILABLE = 'AVAILABLE'
     CHARGING  = 'CHARGING'
+    OFFLINE   = 'OFFLINE'
     UNKNOWN   = 'UNKNOWN'
 
 

@@ -12,4 +12,5 @@ STATE_NAME = {
     State.UNKNOWN: 'Unknown',
     State.AVAILABLE: 'Available',
     State.CHARGING: 'Charging',
+    State.OFFLINE: 'Offline',
 }
